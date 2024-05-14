@@ -80,7 +80,7 @@ public class MainActivity extends AppCompatActivity {
             Log.e("IP Address", ex.toString());
         }
         port = findViewById(R.id.port);
-
+        port.setText("192.168.1.100");
         image = findViewById(R.id.image_car);
         msg_car = findViewById(R.id.text_car);
         Button connect = findViewById(R.id.connect);
