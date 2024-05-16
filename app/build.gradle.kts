@@ -19,7 +19,10 @@ android {
     buildTypes {
         release {
             isMinifyEnabled = false
-            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
         }
     }
     compileOptions {
@@ -41,6 +44,9 @@ dependencies {
     implementation(libs.fresco)
     implementation("io.netty:netty-all:4.1.36.Final")
     implementation("com.alibaba:fastjson:1.1.34.android")
+    implementation(files("libs/sun-common-server.jar"))
+    implementation(files("libs/http-2.2.1.jar"))
+    implementation(libs.gson)
     testImplementation(libs.junit)
     androidTestImplementation(libs.ext.junit)
     androidTestImplementation(libs.espresso.core)

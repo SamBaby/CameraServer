@@ -13,6 +13,7 @@ multidex = "2.0.1"
 drawee = "3.1.3"
 fresco = "3.1.3"
 fastjsonVersion = "2.0.50"
+gson = "2.10.1"
 
 [libraries]
 junit = { group = "junit", name = "junit", version.ref = "junit" }
@@ -28,6 +29,7 @@ multidex = { group = "androidx.multidex", name = "multidex", version.ref = "mult
 drawee = { group = "com.facebook.fresco", name = "drawee", version.ref = "drawee" }
 fresco = { group = "com.facebook.fresco", name = "fresco", version.ref = "fresco" }
 alibaba-fastjson = { group = "com.alibaba", name = "fastjson", version.ref = "fastjsonVersion" }
+gson = { group = "com.google.code.gson", name = "gson", version.ref = "gson" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }
