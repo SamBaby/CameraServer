@@ -40,6 +40,7 @@ import java.util.Enumeration;
 
 import Util.UtilString;
 import json.ResponseAlarmInfoPlate;
+import sdk.DevieceConnectUtil;
 
 public class MainActivity extends AppCompatActivity {
     ImageView image;
@@ -76,6 +77,23 @@ public class MainActivity extends AppCompatActivity {
         } catch (Exception ex) {
             Log.e("IP Address", ex.toString());
         }
+
+        new Thread(() -> {
+            try {
+                // Create server socket
+                server = new ServerSocket(8080);
+
+                while (true) {
+                    // Accept incoming connections
+                    Socket socket = server.accept();
+
+                    // Handle client request in a separate thread
+                    new Thread(() -> handleClient(socket)).start();
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }).start();
         port = findViewById(R.id.port);
         port.setText("8080");
         image = findViewById(R.id.image_car);
@@ -92,16 +110,16 @@ public class MainActivity extends AppCompatActivity {
                     e.printStackTrace();
                 }
             }
-            try {
+//            try {
 //                HttpServer server = HttpServer.create(new InetSocketAddress("0.0.0.0", 8080), 0);
 //                server.createContext("/", new MyHandler());
 ////                server.setExecutor(null); // creates a default executor
 //                server.start();
-            } catch (Exception e) {
-                Log.e("SUNServer", e.toString());
-            }
+//            } catch (Exception e) {
+//                Log.e("SUNServer", e.toString());
+//            }
 
-            new Thread(()->{
+            new Thread(() -> {
                 try {
                     // Create server socket
                     server = new ServerSocket(8080);
@@ -134,53 +152,70 @@ public class MainActivity extends AppCompatActivity {
     private static String TAG = "ServerSocketTest";
 
     private ServerSocket server;
+
     private static void handleClient(Socket socket) {
         try {
             // Create input and output streams
-            DataInputStream dataInputStream = new DataInputStream(socket.getInputStream());
+            BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             DataOutputStream dataOutputStream = new DataOutputStream(socket.getOutputStream());
 
-            // Read message from client
-            String message = dataInputStream.readUTF();
+            StringBuilder builder = new StringBuilder();
+            String line;
+            while ((line = reader.readLine()) != null) {
+                builder.append(builder + "\r\n");
+            }
 
             // Process message (e.g., perform some action or computation)
             // For this example, just echo back the message
-            String response = "Server received: " + message;
+            String response = builder.toString();
 
             // Send response back to client
-            dataOutputStream.writeUTF(checkType(""));
+            dataOutputStream.writeUTF(getHTTPResponseOK() + checkType(""));
             dataOutputStream.flush();
 
             // Close streams and socket
-            dataInputStream.close();
             dataOutputStream.close();
             socket.close();
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
-    private static String checkType(String input) {
-            if (input != null && input.contains("{")) {
-                input = input.substring(input.indexOf("{"));
-                try {
-                    JSONObject obj = new JSONObject(input);
-                    if (!obj.isNull("AlarmInfoPlate")) {
-                        ResponseAlarmInfoPlate res = new ResponseAlarmInfoPlate();
-                        res.setInfo("ok");
-                        res.setContent("retransfer_stop");
-                        res.setIs_pay("true");
-                        res.setSerialData(new ArrayList<>());
-                        Gson gson = new GsonBuilder().setPrettyPrinting().create();
-                        JsonObject ret  = new JsonObject();
-                        ret.add(UtilString.CameraString.Response_AlarmInfoPlate, gson.toJsonTree(res));
-                        return gson.toJson(ret);
-                    }
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            }
 
-            return null;
+    private static String getHTTPResponseOK() {
+        return "HTTP/1.1 200 OK\r\n" +
+                "Content-Type: application/json\r\n" +
+                "\r\n";
+    }
+
+    private static String getHTTPResponseNo() {
+        return "HTTP/1.1 400 Bad Request\r\n" +
+                "Content-Type: text/plain\r\n" +
+                "\r\n" +
+                "400 Bad Request";
+    }
+
+    private static String checkType(String input) {
+        if (input != null && input.contains("{")) {
+            input = input.substring(input.indexOf("{"));
+            try {
+                JSONObject obj = new JSONObject(input);
+                if (!obj.isNull("AlarmInfoPlate")) {
+                    ResponseAlarmInfoPlate res = new ResponseAlarmInfoPlate();
+                    res.setInfo("ok");
+                    res.setContent("retransfer_stop");
+                    res.setIs_pay("true");
+                    res.setSerialData(new ArrayList<>());
+                    Gson gson = new GsonBuilder().setPrettyPrinting().create();
+                    JsonObject ret = new JsonObject();
+                    ret.add(UtilString.CameraString.Response_AlarmInfoPlate, gson.toJsonTree(res));
+                    return gson.toJson(ret);
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+
+        return null;
     }
 
     @Override
