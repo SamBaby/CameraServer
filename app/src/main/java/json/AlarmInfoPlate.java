@@ -91,6 +91,150 @@ public class AlarmInfoPlate {
             this.bright = bright;
         }
 
+        public int getCarBright() {
+            return carBright;
+        }
+
+        public void setCarBright(int carBright) {
+            this.carBright = carBright;
+        }
+
+        public int getCarColor() {
+            return carColor;
+        }
+
+        public void setCarColor(int carColor) {
+            this.carColor = carColor;
+        }
+
+        public int getVehicleBrand() {
+            return vehicleBrand;
+        }
+
+        public void setVehicleBrand(int vehicleBrand) {
+            this.vehicleBrand = vehicleBrand;
+        }
+
+        public int getVehicleSize() {
+            return vehicleSize;
+        }
+
+        public void setVehicleSize(int vehicleSize) {
+            this.vehicleSize = vehicleSize;
+        }
+
+        public int getColorType() {
+            return colorType;
+        }
+
+        public void setColorType(int colorType) {
+            this.colorType = colorType;
+        }
+
+        public int getColorValue() {
+            return colorValue;
+        }
+
+        public void setColorValue(int colorValue) {
+            this.colorValue = colorValue;
+        }
+
+        public int getConfidence() {
+            return confidence;
+        }
+
+        public void setConfidence(int confidence) {
+            this.confidence = confidence;
+        }
+
+        public int getDirection() {
+            return direction;
+        }
+
+        public void setDirection(int direction) {
+            this.direction = direction;
+        }
+
+        public String getImageFile() {
+            return imageFile;
+        }
+
+        public void setImageFile(String imageFile) {
+            this.imageFile = imageFile;
+        }
+
+        public int getImageFileLen() {
+            return imageFileLen;
+        }
+
+        public void setImageFileLen(int imageFileLen) {
+            this.imageFileLen = imageFileLen;
+        }
+
+        public String getImageFragmentFile() {
+            return imageFragmentFile;
+        }
+
+        public void setImageFragmentFile(String imageFragmentFile) {
+            this.imageFragmentFile = imageFragmentFile;
+        }
+
+        public int getImageFragmentFileLen() {
+            return imageFragmentFileLen;
+        }
+
+        public void setImageFragmentFileLen(int imageFragmentFileLen) {
+            this.imageFragmentFileLen = imageFragmentFileLen;
+        }
+
+        public String getLicense() {
+            return license;
+        }
+
+        public void setLicense(String license) {
+            this.license = license;
+        }
+
+        public Location getLocation() {
+            return location;
+        }
+
+        public void setLocation(Location location) {
+            this.location = location;
+        }
+
+        public TimeStamp getTimeStamp() {
+            return timeStamp;
+        }
+
+        public void setTimeStamp(TimeStamp timeStamp) {
+            this.timeStamp = timeStamp;
+        }
+
+        public int getTimeUsed() {
+            return timeUsed;
+        }
+
+        public void setTimeUsed(int timeUsed) {
+            this.timeUsed = timeUsed;
+        }
+
+        public int getTriggerType() {
+            return triggerType;
+        }
+
+        public void setTriggerType(int triggerType) {
+            this.triggerType = triggerType;
+        }
+
+        public int getType() {
+            return type;
+        }
+
+        public void setType(int type) {
+            this.type = type;
+        }
+
         // Other getters and setters for the remaining fields
     }
 
@@ -120,6 +264,30 @@ public class AlarmInfoPlate {
             this.top = top;
         }
 
+        public int getLeft() {
+            return left;
+        }
+
+        public void setLeft(int left) {
+            this.left = left;
+        }
+
+        public int getRight() {
+            return right;
+        }
+
+        public void setRight(int right) {
+            this.right = right;
+        }
+
+        public int getBottom() {
+            return bottom;
+        }
+
+        public void setBottom(int bottom) {
+            this.bottom = bottom;
+        }
+
         // Other getters and setters for the remaining fields
     }
 
@@ -144,6 +312,14 @@ public class AlarmInfoPlate {
 
             public void setSec(long sec) {
                 this.sec = sec;
+            }
+
+            public long getUsec() {
+                return usec;
+            }
+
+            public void setUsec(long usec) {
+                this.usec = usec;
             }
 
             // Other getters and setters for the remaining fields
