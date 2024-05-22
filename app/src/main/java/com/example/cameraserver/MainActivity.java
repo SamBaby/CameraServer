@@ -3,7 +3,6 @@ package com.example.cameraserver;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.os.Bundle;
-import android.os.Environment;
 import android.util.Log;
 import android.widget.Button;
 import android.widget.ImageView;
@@ -20,52 +19,48 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
-import com.sun.net.httpserver.HttpServer;
 
 import org.json.JSONArray;
-import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
-import java.io.DataInputStream;
 import java.io.DataOutputStream;
-import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
-import java.io.Reader;
-import java.io.StringReader;
-import java.io.StringWriter;
 import java.net.InetAddress;
-import java.net.InetSocketAddress;
 import java.net.NetworkInterface;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.Enumeration;
+import java.util.HashMap;
+import java.util.Map;
 
-import Util.ApacheServerReqeust;
-import Util.UtilString;
 import datamodel.Cam;
 import datamodel.CarHistory;
 import datamodel.CarInside;
 import event.Var;
+import json.AlarmGioIn;
 import json.AlarmInfoPlate;
 import json.Heartbeat;
 import json.ResponseAlarmInfoPlate;
 import json.SerialData;
+import util.ApacheServerReqeust;
+import util.Util;
+import util.UtilString;
 
 public class MainActivity extends AppCompatActivity {
     ImageView image;
     TextView port;
     TextView msg_car;
     private String connectIp;
+    Map<Integer, String> colorMap = new HashMap<>();
+    Map<Integer, String> sizeMap = new HashMap<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -96,7 +91,8 @@ public class MainActivity extends AppCompatActivity {
         } catch (Exception ex) {
             Log.e("IP Address", ex.toString());
         }
-
+        setColorMap();
+        setSizeMap();
         port = findViewById(R.id.port);
         port.setText("567JQA");
         image = findViewById(R.id.image_car);
@@ -138,14 +134,6 @@ public class MainActivity extends AppCompatActivity {
                     e.printStackTrace();
                 }
             }
-//            try {
-//                HttpServer server = HttpServer.create(new InetSocketAddress("0.0.0.0", 8001), 0);
-//                server.createContext("/", new MyHandler());
-////                server.setExecutor(null); // creates a default executor
-//                server.start();
-//            } catch (Exception e) {
-//                Log.e("SUNServer", e.toString());
-//            }
 
         });
         disconnect.setOnClickListener(v -> {
@@ -160,43 +148,96 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+    private void setSizeMap() {
+        sizeMap.put(0, "unknown");
+        sizeMap.put(1, "大");
+        sizeMap.put(2, "中");
+        sizeMap.put(3, "小");
+    }
+
+    private void setColorMap() {
+        colorMap.put(0, "unknown");
+        colorMap.put(1, "black");
+        colorMap.put(2, "white");
+        colorMap.put(3, "deep red");
+        colorMap.put(4, "red");
+        colorMap.put(5, "dark yellow");
+        colorMap.put(6, "yellow");
+        colorMap.put(7, "dark gray");
+        colorMap.put(8, "gray");
+        colorMap.put(9, "dark blue");
+        colorMap.put(10, "blue");
+        colorMap.put(11, "dark green");
+        colorMap.put(12, "green");
+        colorMap.put(13, "dark pink");
+        colorMap.put(14, "pink");
+        colorMap.put(15, "dark brown");
+        colorMap.put(16, "brown");
+        colorMap.put(17, "dark purple");
+        colorMap.put(18, "purple");
+    }
+
     private static String TAG = "ServerSocketTest";
 
     private ServerSocket server;
+    private Map<String, Boolean> camQueueDetect = new HashMap<>();
+    private Map<String, Boolean> camInDetect = new HashMap<>();
+    private Var<AlarmInfoPlate> carInfo = new Var<>();
 
     private void handleClient(Socket socket) {
         try {
-            BufferedReader br = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             if (socket.isConnected()) {
+                BufferedReader br = new BufferedReader(new InputStreamReader(socket.getInputStream()));
                 String line;
                 boolean catchMode = false;
 //                String ret = checkCanOut(new AlarmInfoPlate());
                 // Send response back to client
                 try {
-                    String carNo = port.getText().toString();
-                    CarInside carInside = new CarInside();
-                    carInside.setCar_number(carNo);
-                    carInside.setColor("white");
-                    carInside.setType("Large");
-                    carInside.setGate("A");
+                    StringBuilder builder = new StringBuilder();
+                    boolean startParsing = false;
+                    int stop = 1;
+                    int bytesRead;
+                    ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+                    // 读取客户端发送的数据
+                    while (((bytesRead = br.read()) != -1) || (stop <= 0)) {
+                        char c = (char) bytesRead;
+                        if (c == '{') {
+                            startParsing = true;
+                        } else if (c == '}') {
+                            stop--;
+                        }
+                        builder.append(c);
+                    }
+                    try {
+                        JSONObject obj = new JSONObject(builder.toString());
+                        Gson gson = new GsonBuilder().setPrettyPrinting().create();
+                        String res = "";
+                        if (obj.has(UtilString.CameraString.AlarmInfoPlate)) {
+                            AlarmInfoPlate info = gson.fromJson(obj.toString(), AlarmInfoPlate.class);
+                            res = checkCar(info);
+                        } else if (obj.has(UtilString.CameraString.heartbeat)) {
+                            Heartbeat heartbeat = gson.fromJson(obj.toString(), Heartbeat.class);
+                            res = checkHeartbeat(heartbeat);
+                        } else if (obj.has(UtilString.CameraString.SerialData)) {
+                            SerialData data = gson.fromJson(obj.toString(), SerialData.class);
+                            res = checkSerialData(data);
+                        } else if (obj.has(UtilString.CameraString.AlarmGioIn)) {
+                            AlarmGioIn data = gson.fromJson(obj.toString(), AlarmGioIn.class);
+                            checkAlarmGoIn(data);
+                        }
 
-                    SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-                    Date date = new Date();
-                    carInside.setTime_in(format.format(date));
-                    carInside.setPicture_url(UtilString.sampleImage);
-                    Thread t = new Thread(() -> {
-                        ApacheServerReqeust.addCarInside(carInside);
-                    });
-                    t.start();
-                    t.join();
+                        DataOutputStream output = new DataOutputStream(socket.getOutputStream());
+                        output.write((getHTTPResponseOK() + res).getBytes());
+                        output.flush();
+                        output.close();
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
-                DataOutputStream output = new DataOutputStream(socket.getOutputStream());
-                output.write((getHTTPResponseOK() + "{\"dsad\"}").getBytes());
-                output.flush();
+
                 // Close streams and socket
-                output.close();
                 socket.close();
             }
         } catch (IOException e) {
@@ -217,40 +258,22 @@ public class MainActivity extends AppCompatActivity {
                 "400 Bad Request";
     }
 
-    private static String checkType(String input) {
-        if (input != null && input.contains("{")) {
-            input = input.substring(input.indexOf("{"));
-            try {
-                JSONObject obj = new JSONObject(input);
-                if (!obj.isNull("AlarmInfoPlate")) {
-                    ResponseAlarmInfoPlate res = new ResponseAlarmInfoPlate();
-                    res.setInfo("ok");
-                    res.setContent("retransfer_stop");
-                    res.setIs_pay("true");
-                    res.setSerialData(new ArrayList<>());
-                    Gson gson = new GsonBuilder().setPrettyPrinting().create();
-                    JsonObject ret = new JsonObject();
-                    ret.add(UtilString.CameraString.Response_AlarmInfoPlate, gson.toJsonTree(res));
-                    return gson.toJson(ret);
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
-        return "";
-    }
-
     private String checkCar(AlarmInfoPlate info) {
         Var<String> ret = new Var<>("");
         String ip = info.getIpaddr();
-
+        byte[] decodedBytes = Util.getBase64Decode(info.getResult().getPlateResult().getImageFile());
+        runOnUiThread(()->{
+            Bitmap bitmap = BitmapFactory.decodeByteArray(decodedBytes, 0, decodedBytes.length);
+            image.setImageBitmap(bitmap);
+            ret.set(getCameraResponse(true));
+        });
         //check cam is in or out : false-in, true-out
-        boolean inOut = checkGateType(ip);
-        if (inOut) {//out
-            ret.set(checkCanOut(info));
-        } else {//in
-            ret.set(checkCanIn(info));
-        }
+//        boolean inOut = checkGateType(ip);
+//        if (inOut) {//out
+//            ret.set(checkCanOut(info));
+//        } else {//in
+//            ret.set(checkCanIn(info));
+//        }
         return ret.get();
     }
 
@@ -293,6 +316,7 @@ public class MainActivity extends AppCompatActivity {
         int size = info.getResult().getPlateResult().getVehicleSize();
         String imageString = info.getResult().getPlateResult().getImageFile();
         int imageLength = info.getResult().getPlateResult().getImageFileLen();
+        Var<Boolean> open = new Var<>(false);
         Thread checkCar = new Thread(() -> {
             int total = 0;
             try {
@@ -324,8 +348,7 @@ public class MainActivity extends AppCompatActivity {
                     carInside.setTime_in(format.format(date));
                     carInside.setPicture_url(imageString);
                     ApacheServerReqeust.addCarInside(carInside);
-
-
+                    open.set(true);
                 }
             } catch (Exception e) {
                 e.printStackTrace();
@@ -337,13 +360,13 @@ public class MainActivity extends AppCompatActivity {
         } catch (Exception e) {
             e.printStackTrace();
         }
-        return "";
+        return getCameraResponse(open.get());
     }
 
     private String checkCanOut(AlarmInfoPlate info) {
-//        String carNo = info.getResult().getPlateResult().getLicense();
-        String carNo = "567JQA";
+        String carNo = info.getResult().getPlateResult().getLicense();
         Var<CarInside> car = new Var<>();
+        Var<Boolean> open = new Var<>(false);
         Thread getCar = new Thread(() -> {
             String res = ApacheServerReqeust.getCarInsideWithCarNumber(carNo);
             if (res != null && !res.isEmpty()) {
@@ -378,7 +401,7 @@ public class MainActivity extends AppCompatActivity {
                                     history.setColor(car.get().getColor());
                                     ApacheServerReqeust.addHistory(history);
                                     //return camera response and open gate
-
+                                    open.set(true);
                                 } else {
                                     //camara response and close gate
                                 }
@@ -398,16 +421,58 @@ public class MainActivity extends AppCompatActivity {
         } catch (Exception e) {
             e.printStackTrace();
         }
+        return getCameraResponse(open.get());
+    }
+
+    private String getCameraResponse(boolean openGate) {
+        ResponseAlarmInfoPlate res = new ResponseAlarmInfoPlate();
+        res.setContent("retransfer_stop");
+        res.setIs_pay("true");
+        res.setSerialData(new ArrayList<>());
+        Gson gson = new GsonBuilder().setPrettyPrinting().create();
+        JsonObject ret = new JsonObject();
+        ret.add(UtilString.CameraString.Response_AlarmInfoPlate, gson.toJsonTree(res));
+        if (openGate) {
+            res.setInfo("ok");
+        } else {
+            res.setInfo("no");
+        }
+        return gson.toJson(ret);
+    }
+
+    private String checkHeartbeat(Heartbeat info) {
         return "";
     }
 
-
-    private String checkHeartbeat(Heartbeat info) {
-        return null;
+    private String checkSerialData(SerialData info) {
+        return "";
     }
 
-    private String checkSerialData(SerialData info) {
-        return null;
+    /***
+     *
+     * @param info  IO port changes info
+     * @return
+     */
+    private void checkAlarmGoIn(AlarmGioIn info) {
+        String ip = info.getIpaddr();
+        int source = info.getResult().getTriggerResult().getSource();
+        int value = info.getResult().getTriggerResult().getValue();
+        if (source == 0) {
+            if (value == 0) {
+                camQueueDetect.put(ip, true);
+            } else {
+                camQueueDetect.put(ip, false);
+            }
+        } else {
+            if (value == 0) {
+                camInDetect.put(ip, true);
+            } else {
+                camInDetect.put(ip, false);
+            }
+        }
+        runOnUiThread(()->{
+            msg_car.setText(String.format("source %d - value %d", source, value));
+        });
     }
 
     @Override
@@ -441,7 +506,7 @@ public class MainActivity extends AppCompatActivity {
                 byteArrayOutputStream.write(buffer, 0, bytesRead);
             }
 
-            String response = checkType(byteArrayOutputStream.toString());
+            String response = "";
             t.sendResponseHeaders(200, response.length());
             t.getResponseHeaders().set("Content-Type", "application/json");
             OutputStream os = t.getResponseBody();
