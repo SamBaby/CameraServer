@@ -199,30 +199,40 @@ public class MainActivity extends AppCompatActivity {
                     int bytesRead;
                     ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
                     // 读取客户端发送的数据
-                    while (((bytesRead = br.read()) != -1) || (stop <= 0)) {
+                    while (((bytesRead = br.read()) != -1) && (stop > 0)) {
                         char c = (char) bytesRead;
                         if (c == '{') {
-                            startParsing = true;
+                            if (startParsing) {
+                                stop++;
+                            } else {
+                                startParsing = true;
+                            }
                         } else if (c == '}') {
                             stop--;
                         }
-                        builder.append(c);
+                        if (startParsing) {
+                            builder.append(c);
+                        }
                     }
+                    String res = "";
+                    runOnUiThread(()->{
+                        msg_car.setText(builder.toString());
+                    });
                     try {
                         JSONObject obj = new JSONObject(builder.toString());
                         Gson gson = new GsonBuilder().setPrettyPrinting().create();
-                        String res = "";
+
                         if (obj.has(UtilString.CameraString.AlarmInfoPlate)) {
-                            AlarmInfoPlate info = gson.fromJson(obj.toString(), AlarmInfoPlate.class);
+                            AlarmInfoPlate info = gson.fromJson(obj.getJSONObject(UtilString.CameraString.AlarmInfoPlate).toString(), AlarmInfoPlate.class);
                             res = checkCar(info);
                         } else if (obj.has(UtilString.CameraString.heartbeat)) {
-                            Heartbeat heartbeat = gson.fromJson(obj.toString(), Heartbeat.class);
+                            Heartbeat heartbeat = gson.fromJson(obj.getJSONObject(UtilString.CameraString.heartbeat).toString(), Heartbeat.class);
                             res = checkHeartbeat(heartbeat);
                         } else if (obj.has(UtilString.CameraString.SerialData)) {
-                            SerialData data = gson.fromJson(obj.toString(), SerialData.class);
+                            SerialData data = gson.fromJson(obj.getJSONObject(UtilString.CameraString.SerialData).toString(), SerialData.class);
                             res = checkSerialData(data);
                         } else if (obj.has(UtilString.CameraString.AlarmGioIn)) {
-                            AlarmGioIn data = gson.fromJson(obj.toString(), AlarmGioIn.class);
+                            AlarmGioIn data = gson.fromJson(obj.getJSONObject(UtilString.CameraString.AlarmGioIn).toString(), AlarmGioIn.class);
                             checkAlarmGoIn(data);
                         }
 
@@ -261,12 +271,7 @@ public class MainActivity extends AppCompatActivity {
     private String checkCar(AlarmInfoPlate info) {
         Var<String> ret = new Var<>("");
         String ip = info.getIpaddr();
-        byte[] decodedBytes = Util.getBase64Decode(info.getResult().getPlateResult().getImageFile());
-        runOnUiThread(()->{
-            Bitmap bitmap = BitmapFactory.decodeByteArray(decodedBytes, 0, decodedBytes.length);
-            image.setImageBitmap(bitmap);
-            ret.set(getCameraResponse(true));
-        });
+        ret.set(getCameraResponse(true));
         //check cam is in or out : false-in, true-out
 //        boolean inOut = checkGateType(ip);
 //        if (inOut) {//out
@@ -429,14 +434,14 @@ public class MainActivity extends AppCompatActivity {
         res.setContent("retransfer_stop");
         res.setIs_pay("true");
         res.setSerialData(new ArrayList<>());
-        Gson gson = new GsonBuilder().setPrettyPrinting().create();
-        JsonObject ret = new JsonObject();
-        ret.add(UtilString.CameraString.Response_AlarmInfoPlate, gson.toJsonTree(res));
         if (openGate) {
             res.setInfo("ok");
         } else {
             res.setInfo("no");
         }
+        Gson gson = new GsonBuilder().setPrettyPrinting().create();
+        JsonObject ret = new JsonObject();
+        ret.add(UtilString.CameraString.Response_AlarmInfoPlate, gson.toJsonTree(res));
         return gson.toJson(ret);
     }
 
@@ -470,9 +475,9 @@ public class MainActivity extends AppCompatActivity {
                 camInDetect.put(ip, false);
             }
         }
-        runOnUiThread(()->{
-            msg_car.setText(String.format("source %d - value %d", source, value));
-        });
+//        runOnUiThread(() -> {
+//            msg_car.setText(String.format("source %d - value %d", source, value));
+//        });
     }
 
     @Override
